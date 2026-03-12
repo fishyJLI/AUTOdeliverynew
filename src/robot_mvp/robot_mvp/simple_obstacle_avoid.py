@@ -18,7 +18,7 @@ class SimpleObstacleAvoid(Node):
             10
         )
 
-        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.cmd_pub = self.create_publisher(Twist, '/obstacle_cmd_vel', 10)#self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
         self.front_distance = float('inf')
 

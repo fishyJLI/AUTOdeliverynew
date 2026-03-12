@@ -29,6 +29,8 @@ setup(
             'mode_cmdvel_mux = robot_mvp.mode_cmdvel_mux:main',
             'cmdvel_serial_bridge = robot_mvp.cmdvel_serial_bridge:main',
             'simple_obstacle_avoid = robot_mvp.simple_obstacle_avoid:main',
+            'mode_switch_cmdvel = robot_mvp.mode_switch_cmdvel:main',
+            'lidar_follow = robot_mvp.lidar_follow:main',
         ],
     },
 )
