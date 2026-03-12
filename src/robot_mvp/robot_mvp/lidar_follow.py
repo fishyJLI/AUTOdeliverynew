@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
-import math
-
 import rclpy
 from rclpy.node import Node
-
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
+import math
+
+
+TARGET_DISTANCE = 1.5
+DIST_TOL = 0.15
 
 
 class LidarFollow(Node):
+
     def __init__(self):
         super().__init__('lidar_follow')
 
@@ -17,87 +20,63 @@ class LidarFollow(Node):
             LaserScan,
             '/scan',
             self.scan_callback,
-            10
-        )
+            10)
 
-        self.cmd_pub = self.create_publisher(Twist, '/follow_cmd_vel', 10)
+        self.cmd_pub = self.create_publisher(
+            Twist,
+            '/cmd_vel',
+            10)
 
-        self.timer = self.create_timer(0.1, self.control_loop)
+        self.get_logger().info("LiDAR follow node started")
 
-        self.target_distance = 1.0
-        self.max_linear = 0.18
-        self.max_angular = 0.8
+    def scan_callback(self, msg):
 
-        self.k_linear = 0.5
-        self.k_angular = 1.2
+        ranges = msg.ranges
+        angle_min = msg.angle_min
+        angle_increment = msg.angle_increment
 
-        self.stop_distance = 0.45
-        self.front_half_angle_deg = 35.0
-        self.target_timeout_sec = 0.5
+        closest_distance = 999
+        closest_angle = 0
 
-        self.target_distance_meas = None
-        self.target_angle_meas = None
-        self.last_target_time = self.get_clock().now()
+        for i, r in enumerate(ranges):
 
-        self.get_logger().info('LiDAR follow node started.')
-
-    def scan_callback(self, msg: LaserScan):
-        best_range = None
-        best_angle = None
-
-        for i, r in enumerate(msg.ranges):
-            if not math.isfinite(r) or r <= 0.0:
+            if math.isinf(r) or math.isnan(r):
                 continue
 
-            angle = msg.angle_min + i * msg.angle_increment
-            angle_deg = math.degrees(angle)
+            angle = angle_min + i * angle_increment
 
-            if -self.front_half_angle_deg <= angle_deg <= self.front_half_angle_deg:
-                if best_range is None or r < best_range:
-                    best_range = r
-                    best_angle = angle
+            # only look in front sector (-30° to +30°)
+            if -math.radians(30) < angle < math.radians(30):
 
-        if best_range is not None:
-            self.target_distance_meas = best_range
-            self.target_angle_meas = best_angle
-            self.last_target_time = self.get_clock().now()
+                if r < closest_distance:
+                    closest_distance = r
+                    closest_angle = angle
 
-    def control_loop(self):
         cmd = Twist()
 
-        now = self.get_clock().now()
-        age = (now - self.last_target_time).nanoseconds / 1e9
-
-        if self.target_distance_meas is None or self.target_angle_meas is None or age > self.target_timeout_sec:
+        if closest_distance == 999:
+            # nothing detected
             self.cmd_pub.publish(cmd)
             return
 
-        dist = self.target_distance_meas
-        ang = self.target_angle_meas
+        distance_error = closest_distance - TARGET_DISTANCE
 
-        if dist < self.stop_distance:
-            cmd.linear.x = 0.0
-            cmd.angular.z = 0.0
-            self.cmd_pub.publish(cmd)
-            return
+        # forward/back control
+        if abs(distance_error) > DIST_TOL:
+            cmd.linear.x = 0.4 * distance_error
 
-        distance_error = dist - self.target_distance
+        # steering control
+        cmd.angular.z = -1.5 * closest_angle
 
-        linear_x = self.k_linear * distance_error
-        angular_z = self.k_angular * ang
+        # limit speeds
+        cmd.linear.x = max(min(cmd.linear.x, 0.3), -0.3)
+        cmd.angular.z = max(min(cmd.angular.z, 1.0), -1.0)
 
-        linear_x = max(min(linear_x, self.max_linear), -self.max_linear)
-        angular_z = max(min(angular_z, self.max_angular), -self.max_angular)
-
-        if abs(distance_error) < 0.08:
-            linear_x = 0.0
-
-        if abs(ang) < math.radians(4.0):
-            angular_z = 0.0
-
-        cmd.linear.x = linear_x
-        cmd.angular.z = angular_z
         self.cmd_pub.publish(cmd)
+
+        self.get_logger().info(
+            f"target {closest_distance:.2f} m angle {math.degrees(closest_angle):.1f}"
+        )
 
 
 def main(args=None):
