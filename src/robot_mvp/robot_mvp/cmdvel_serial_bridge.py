@@ -31,7 +31,7 @@ class CmdVelSerialBridge(Node):
         super().__init__("cmdvel_serial_bridge")
 
         # -------- Parameters --------
-        self.declare_parameter("port", "/dev/PORT_NAME_HERE")  # change later (we kept changing the port) 
+        self.declare_parameter("port", "/dev/ttyUSB0")  # change later (we kept changing the port) 
         self.declare_parameter("baudrate", 115200)
         self.declare_parameter("cmd_topic", "/cmd_vel")
         self.declare_parameter("send_rate_hz", 30.0)
