@@ -7,8 +7,8 @@ from geometry_msgs.msg import Twist
 import math
 
 
-TARGET_DISTANCE = 1.5
-DIST_TOL = 0.15
+TARGET_DISTANCE = 1.2
+DIST_TOL = 0.3
 
 
 class LidarFollow(Node):
