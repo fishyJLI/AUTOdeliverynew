@@ -7,7 +7,7 @@ from geometry_msgs.msg import Twist
 import math
 
 
-TARGET_DISTANCE = 1.2
+TARGET_DISTANCE = 1.5
 DIST_TOL = 0.3
 
 
@@ -66,7 +66,7 @@ class LidarFollow(Node):
             cmd.linear.x = 0.4 * distance_error
 
         # steering control
-        cmd.angular.z = -1.5 * closest_angle
+        cmd.angular.z = -0.3 * closest_angle
 
         # limit speeds
         cmd.linear.x = max(min(cmd.linear.x, 0.3), -0.3)
