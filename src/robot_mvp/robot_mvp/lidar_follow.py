@@ -1,18 +1,28 @@
 #!/usr/bin/env python3
 
+import math
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
-import math
 
 
 TARGET_DISTANCE = 1.5
 DIST_TOL = 0.3
 
+FRONT_ANGLE_DEG = 30
+ANGLE_DEADBAND_DEG = 8
+BIG_TURN_DEG = 15
+
+MAX_LINEAR = 0.25
+MAX_ANGULAR = 0.8
+
+KP_LINEAR = 0.35
+KP_ANGULAR = 0.8
+
 
 class LidarFollow(Node):
-
     def __init__(self):
         super().__init__('lidar_follow')
 
@@ -20,62 +30,78 @@ class LidarFollow(Node):
             LaserScan,
             '/scan',
             self.scan_callback,
-            10)
+            10
+        )
 
         self.cmd_pub = self.create_publisher(
             Twist,
             '/cmd_vel',
-            10)
+            10
+        )
 
-        self.get_logger().info("LiDAR follow node started")
+        self.get_logger().info('LiDAR follow node started')
 
-    def scan_callback(self, msg):
+    def scan_callback(self, msg: LaserScan):
+        closest_distance = float('inf')
+        closest_angle = 0.0
 
-        ranges = msg.ranges
-        angle_min = msg.angle_min
-        angle_increment = msg.angle_increment
+        front_limit = math.radians(FRONT_ANGLE_DEG)
 
-        closest_distance = 999
-        closest_angle = 0
-
-        for i, r in enumerate(ranges):
-
+        for i, r in enumerate(msg.ranges):
             if math.isinf(r) or math.isnan(r):
                 continue
 
-            angle = angle_min + i * angle_increment
+            # ignore nonsense / ultra-close noise
+            if r < 0.15 or r > 6.0:
+                continue
 
-            # only look in front sector (-30° to +30°)
-            if -math.radians(30) < angle < math.radians(30):
+            angle = msg.angle_min + i * msg.angle_increment
 
+            if -front_limit < angle < front_limit:
                 if r < closest_distance:
                     closest_distance = r
                     closest_angle = angle
 
         cmd = Twist()
 
-        if closest_distance == 999:
-            # nothing detected
+        # no valid target -> stop
+        if closest_distance == float('inf'):
             self.cmd_pub.publish(cmd)
+            self.get_logger().info('No target detected -> stop')
             return
 
         distance_error = closest_distance - TARGET_DISTANCE
+        angle_deadband = math.radians(ANGLE_DEADBAND_DEG)
+        big_turn_thresh = math.radians(BIG_TURN_DEG)
 
-        # forward/back control
-        if abs(distance_error) > DIST_TOL:
-            cmd.linear.x = 0.4 * distance_error
+        # Big angle error: rotate first, don't drive forward
+        if abs(closest_angle) > big_turn_thresh:
+            cmd.linear.x = 0.0
+            cmd.angular.z = -KP_ANGULAR * closest_angle
 
-        # steering control
-        cmd.angular.z = -0.3 * closest_angle
+        else:
+            # Distance control
+            if abs(distance_error) > DIST_TOL:
+                cmd.linear.x = KP_LINEAR * distance_error
+            else:
+                cmd.linear.x = 0.0
 
-        # limit speeds
-        cmd.linear.x = max(min(cmd.linear.x, 0.3), -0.3)
-        cmd.angular.z = max(min(cmd.angular.z, 1.0), -1.0)
+            # Small angle correction only if needed
+            if abs(closest_angle) > angle_deadband:
+                cmd.angular.z = -0.4 * closest_angle
+            else:
+                cmd.angular.z = 0.0
+
+        # Speed limits
+        cmd.linear.x = max(min(cmd.linear.x, MAX_LINEAR), -MAX_LINEAR)
+        cmd.angular.z = max(min(cmd.angular.z, MAX_ANGULAR), -MAX_ANGULAR)
 
         self.cmd_pub.publish(cmd)
 
         self.get_logger().info(
-            f"target {closest_distance:.2f} m angle {math.degrees(closest_angle):.1f}"
+            f'target={closest_distance:.2f}m '
+            f'angle={math.degrees(closest_angle):.1f}deg '
+            f'cmd_x={cmd.linear.x:.2f} cmd_z={cmd.angular.z:.2f}'
         )
 
 
