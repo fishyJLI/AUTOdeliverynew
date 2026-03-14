@@ -8,8 +8,8 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 
-TARGET_DISTANCE = 1.5
-DIST_TOL = 0.3
+TARGET_DISTANCE = 1.0
+DIST_TOL = 0.15
 
 FRONT_ANGLE_DEG = 30
 ANGLE_DEADBAND_DEG = 8
