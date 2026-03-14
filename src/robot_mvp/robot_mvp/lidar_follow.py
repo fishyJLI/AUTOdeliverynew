@@ -8,8 +8,8 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 
-TARGET_DISTANCE = 1.0
-DIST_TOL = 0.15
+TARGET_DISTANCE = 1.5
+DIST_TOL = 0.3
 
 FRONT_ANGLE_DEG = 30
 ANGLE_DEADBAND_DEG = 8
@@ -19,7 +19,7 @@ MAX_LINEAR = 0.25
 MAX_ANGULAR = 0.8
 
 KP_LINEAR = 0.35
-KP_ANGULAR = 0.8
+KP_ANGULAR = 1.5
 
 
 class LidarFollow(Node):
