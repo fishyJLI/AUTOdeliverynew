@@ -19,7 +19,7 @@ MAX_LINEAR = 0.25
 MAX_ANGULAR = 0.8
 
 KP_LINEAR = 0.35
-KP_ANGULAR = 1.5
+KP_ANGULAR = 0.8
 
 
 class LidarFollow(Node):
