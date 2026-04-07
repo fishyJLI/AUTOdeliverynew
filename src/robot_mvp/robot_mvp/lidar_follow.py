@@ -9,7 +9,7 @@ from geometry_msgs.msg import Twist
 
 
 TARGET_DISTANCE = 1.5
-DIST_TOL = 0.3
+DIST_TOL = 0.28
 
 FRONT_ANGLE_DEG = 30
 ANGLE_DEADBAND_DEG = 8

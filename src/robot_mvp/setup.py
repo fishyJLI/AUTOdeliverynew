@@ -1,4 +1,6 @@
 from setuptools import find_packages, setup
+from glob import glob
+import os
 
 package_name = 'robot_mvp'
 
@@ -9,7 +11,8 @@ setup(
     data_files=[
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        ('share/' + package_name + '/launch', ['launch/robot_bringup.launch.py']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'config'), glob('config/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -31,6 +34,7 @@ setup(
             'simple_obstacle_avoid = robot_mvp.simple_obstacle_avoid:main',
             'mode_switch_cmdvel = robot_mvp.mode_switch_cmdvel:main',
             'lidar_follow = robot_mvp.lidar_follow:main',
+            'lidar_safety_node = robot_mvp.lidar_safety_node:main',
         ],
     },
 )

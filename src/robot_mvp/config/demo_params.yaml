@@ -1,0 +1,9 @@
+demo_behavior:
+  ros__parameters:
+    forward_speed: 0.10
+    turn_speed: 0.35
+    stop_distance: 0.60
+    front_angle_deg: 25.0
+    person_timeout_sec: 1.0
+    obstacle_timeout_sec: 1.0
+    default_state: "CLEAR"
