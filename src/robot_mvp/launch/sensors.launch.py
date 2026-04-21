@@ -45,9 +45,9 @@ def generate_launch_description():
                 'enable_point_cloud': False,
                 'enable_colored_point_cloud': False,
                 'publish_tf': False,
-                'color_width': 640,
-                'color_height': 480,
-                'color_fps': 30,
+                'color_width': 320,
+                'color_height': 240,
+                'color_fps': 15,
             }
         ]
     )

@@ -35,6 +35,9 @@ setup(
             'mode_switch_cmdvel = robot_mvp.mode_switch_cmdvel:main',
             'lidar_follow = robot_mvp.lidar_follow:main',
             'lidar_safety_node = robot_mvp.lidar_safety_node:main',
+            'demo_behavior_node = robot_mvp.demo_behavior_node:main',
+            'person_detection_node = robot_mvp.person_detection_node:main',
+            'semantic_decision_node = robot_mvp.semantic_decision_node:main',
         ],
     },
 )

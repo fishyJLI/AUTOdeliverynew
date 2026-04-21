@@ -1,8 +1,10 @@
+import math
+
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import qos_profile_sensor_data
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import String
-import math
 
 
 class LidarSafetyNode(Node):
@@ -13,7 +15,7 @@ class LidarSafetyNode(Node):
             LaserScan,
             '/scan',
             self.scan_callback,
-            10
+            qos_profile_sensor_data
         )
 
         self.publisher = self.create_publisher(
@@ -22,17 +24,16 @@ class LidarSafetyNode(Node):
             10
         )
 
-        # parameters
-        self.stop_distance = 0.6  # meters
-        self.front_angle = 30.0   # degrees
+        self.stop_distance = 0.60
+        self.front_angle_deg = 30.0
 
-        self.get_logger().info("Lidar Safety Node started")
+        self.get_logger().info('Lidar Safety Node started')
 
     def scan_callback(self, msg: LaserScan):
-        min_distance = float('inf')
+        self.get_logger().info('Received scan')
 
-        # Convert front angle to radians
-        half_angle = math.radians(self.front_angle / 2.0)
+        min_distance = float('inf')
+        half_angle = math.radians(self.front_angle_deg / 2.0)
 
         angle = msg.angle_min
 
@@ -41,8 +42,7 @@ class LidarSafetyNode(Node):
                 angle += msg.angle_increment
                 continue
 
-            # check if angle is within front window
-            if -half_angle < angle < half_angle:
+            if -half_angle <= angle <= half_angle:
                 if r < min_distance:
                     min_distance = r
 
@@ -51,14 +51,14 @@ class LidarSafetyNode(Node):
         state_msg = String()
 
         if min_distance < self.stop_distance:
-            state_msg.data = "BLOCKED"
+            state_msg.data = 'BLOCKED'
         else:
-            state_msg.data = "CLEAR"
+            state_msg.data = 'CLEAR'
 
         self.publisher.publish(state_msg)
 
         self.get_logger().info(
-            f"Front min distance: {min_distance:.2f} → {state_msg.data}"
+            f'Front min distance: {min_distance:.2f} -> {state_msg.data}'
         )
 
 
@@ -68,3 +68,7 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
+
+if __name__ == '__main__':
+    main()
