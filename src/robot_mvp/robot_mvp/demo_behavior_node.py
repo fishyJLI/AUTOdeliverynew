@@ -2,54 +2,85 @@ import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import Imu
+import math
 
 
-class DemoBehaviorNode(Node):
+class DriftBehaviorNode(Node):
     def __init__(self):
-        super().__init__('demo_behavior_node')
+        super().__init__('drift_behavior_node')
 
-        self.subscription = self.create_subscription(
-            String,
-            '/lidar_safety_state',
-            self.state_callback,
-            10
-        )
+        # Subscribers
+        self.create_subscription(String, '/semantic_state', self.semantic_callback, 10)
+        self.create_subscription(Imu, '/imu_data_ros', self.imu_callback, 10)
 
-        self.cmd_pub = self.create_publisher(
-            Twist,
-            '/cmd_vel_demo',
-            10
-        )
+        # Publisher
+        self.cmd_pub = self.create_publisher(Twist, '/cmd_vel', 10)
 
-        self.forward_speed = 0.10
-        self.turn_speed = 0.30
+        # State
+        self.semantic_state = "CLEAR"
+        self.current_yaw = 0.0
+        self.target_yaw = None
 
-        self.get_logger().info('Demo Behavior Node started')
+        # Gains
+        self.k_heading = 1.5
+        self.avoid_turn = 0.6
 
-    def state_callback(self, msg: String):
+        # Timer
+        self.timer = self.create_timer(0.1, self.control_loop)
+
+        self.get_logger().info("Drift Behavior Node started")
+
+    def semantic_callback(self, msg):
+        self.semantic_state = msg.data
+
+    def imu_callback(self, msg):
+        # Convert quaternion → yaw
+        q = msg.orientation
+        siny_cosp = 2 * (q.w * q.z + q.x * q.y)
+        cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z)
+        self.current_yaw = math.atan2(siny_cosp, cosy_cosp)
+
+        if self.target_yaw is None:
+            self.target_yaw = self.current_yaw
+
+    def control_loop(self):
         cmd = Twist()
 
-        if msg.data == 'BLOCKED':
+        if self.target_yaw is None:
+            return
+
+        # Heading correction
+        error = self.target_yaw - self.current_yaw
+
+        # normalize angle
+        error = math.atan2(math.sin(error), math.cos(error))
+
+        heading_correction = self.k_heading * error
+
+        # =========================
+        # PERSON → STOP
+        # =========================
+        if self.semantic_state == "PERSON":
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
-            self.get_logger().info('BLOCKED -> STOP')
 
-        elif msg.data == 'CLEAR':
-            cmd.linear.x = self.forward_speed
-            cmd.angular.z = 0.0
-            self.get_logger().info('CLEAR -> MOVE FORWARD')
+        # =========================
+        # OBSTACLE → DRIFT
+        # =========================
+        elif self.semantic_state == "OBSTACLE":
+            cmd.linear.x = 0.15
+            cmd.angular.z = heading_correction + self.avoid_turn
 
+        # =========================
+        # CLEAR → STRAIGHT + CORRECT
+        # =========================
         else:
-            cmd.linear.x = 0.0
-            cmd.angular.z = 0.0
-            self.get_logger().warn(f'Unknown state: {msg.data} -> STOP')
+            cmd.linear.x = 0.2
+            cmd.angular.z = heading_correction
 
         self.cmd_pub.publish(cmd)
 
-
-def main(args=None):
-    rclpy.init(args=args)
-    node = DemoBehaviorNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+        self.get_logger().info(
+            f"Yaw: {self.current_yaw:.2f} | Target: {self.target_yaw:.2f} | State: {self.semantic_state}"
+        )
