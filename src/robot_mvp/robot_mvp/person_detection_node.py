@@ -17,7 +17,7 @@ class PersonDetectionNode(Node):
             10
         )
 
-        # Open webcam (0 = your working webcam)
+        # Open webcam (NUMBER = working webcam)
         self.cap = cv2.VideoCapture(4)
 
         if not self.cap.isOpened():

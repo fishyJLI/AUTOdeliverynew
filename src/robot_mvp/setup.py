@@ -38,6 +38,7 @@ setup(
             'demo_behavior_node = robot_mvp.demo_behavior_node:main',
             'person_detection_node = robot_mvp.person_detection_node:main',
             'semantic_decision_node = robot_mvp.semantic_decision_node:main',
+            'keyboard_cmdvel_node = robot_mvp.keyboard_cmdvel_node:main',
         ],
     },
 )
