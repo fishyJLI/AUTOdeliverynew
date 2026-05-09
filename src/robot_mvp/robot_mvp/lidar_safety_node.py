@@ -24,7 +24,7 @@ class LidarSafetyNode(Node):
             10
         )
 
-        self.stop_distance = 0.60
+        self.stop_distance = 1.20
         self.front_angle_deg = 30.0
 
         self.get_logger().info('Lidar Safety Node started')
