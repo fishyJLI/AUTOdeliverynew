@@ -40,6 +40,7 @@ setup(
             'semantic_decision_node = robot_mvp.semantic_decision_node:main',
             'keyboard_cmdvel_node = robot_mvp.keyboard_cmdvel_node:main',
             'simple_behavior_node = robot_mvp.simple_behavior_node:main',
+            'showcase_behavior_node = robot_mvp.showcase_behavior_node:main',
         ],
     },
 )
