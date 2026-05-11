@@ -1,26 +1,21 @@
 #!/usr/bin/env python3
 """
-cmd_vel -> Arduino serial bridge
+cmd_vel + LED state -> Arduino serial bridge
 
 Subscribes:
-    /cmd_vel  (geometry_msgs/Twist)
+    /cmd_vel     (geometry_msgs/Twist)
+    /led_state   (std_msgs/String)
 
-Sends over serial (ASCII):
+Sends over serial:
     "vx wz\n"
-Example:
-    0.20 -0.50
-
-Parameters:
-    port: serial device (default placeholder)
-    baudrate: default 115200
-    cmd_topic: default /cmd_vel
-    send_rate_hz: default 30
-    timeout_s: stop sending nonzero if no cmd received
+    "LED:FLASH\n"
+    "LED:OFF\n"
 """
 
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from std_msgs.msg import String
 import serial
 import time
 
@@ -31,15 +26,17 @@ class CmdVelSerialBridge(Node):
         super().__init__("cmdvel_serial_bridge")
 
         # -------- Parameters --------
-        self.declare_parameter("port", "/dev/ttyUSB0")  # change later (we kept changing the port) 
+        self.declare_parameter("port", "/dev/ttyUSB0")
         self.declare_parameter("baudrate", 115200)
         self.declare_parameter("cmd_topic", "/cmd_vel")
+        self.declare_parameter("led_topic", "/led_state")
         self.declare_parameter("send_rate_hz", 30.0)
         self.declare_parameter("timeout_s", 0.5)
 
         self.port = self.get_parameter("port").value
         self.baudrate = int(self.get_parameter("baudrate").value)
         self.cmd_topic = self.get_parameter("cmd_topic").value
+        self.led_topic = self.get_parameter("led_topic").value
         self.send_rate = float(self.get_parameter("send_rate_hz").value)
         self.timeout_s = float(self.get_parameter("timeout_s").value)
 
@@ -56,13 +53,36 @@ class CmdVelSerialBridge(Node):
         self.latest_cmd = Twist()
         self.last_cmd_time = self.get_clock().now()
 
+        self.last_led_state = None
+
         self.create_subscription(Twist, self.cmd_topic, self.cmd_callback, 10)
+        self.create_subscription(String, self.led_topic, self.led_callback, 10)
 
         self.timer = self.create_timer(1.0 / self.send_rate, self.timer_callback)
 
     def cmd_callback(self, msg: Twist):
         self.latest_cmd = msg
         self.last_cmd_time = self.get_clock().now()
+
+    def led_callback(self, msg: String):
+        led_state = msg.data.strip().upper()
+
+        # Only send if changed, to avoid spamming Arduino
+        if led_state == self.last_led_state:
+            return
+
+        if led_state not in ["FLASH", "OFF", "ON"]:
+            self.get_logger().warn(f"Unknown LED state ignored: {led_state}")
+            return
+
+        line = f"LED:{led_state}\n"
+
+        try:
+            self.ser.write(line.encode("utf-8"))
+            self.last_led_state = led_state
+            self.get_logger().info(f"Sent LED command: {line.strip()}")
+        except Exception as e:
+            self.get_logger().error(f"LED serial write failed: {e}")
 
     def timer_callback(self):
         now = self.get_clock().now()
