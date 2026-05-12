@@ -18,7 +18,7 @@ class PersonDetectionNode(Node):
         )
 
         # Open webcam (NUMBER = working webcam)
-        self.cap = cv2.VideoCapture(2)
+        self.cap = cv2.VideoCapture(0)
 
         if not self.cap.isOpened():
             self.get_logger().error("Failed to open camera")
