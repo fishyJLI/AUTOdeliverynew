@@ -13,6 +13,9 @@ class ShowcaseUI:
         root.geometry("900x500")
         root.configure(bg="black")
 
+        # Optional fullscreen
+        # root.attributes('-fullscreen', True)
+
         self.title = tk.Label(
             root,
             text="AUTONOMOUS DELIVERY ROBOT",
@@ -44,7 +47,7 @@ class ShowcaseUI:
         self.info.pack(pady=10)
 
         # =========================
-        # Buttons
+        # START SYSTEM BUTTON
         # =========================
 
         self.bringup_button = tk.Button(
@@ -60,6 +63,10 @@ class ShowcaseUI:
 
         self.bringup_button.pack(pady=20)
 
+        # =========================
+        # START AUTONOMY BUTTON
+        # =========================
+
         self.behavior_button = tk.Button(
             root,
             text="START AUTONOMY",
@@ -72,6 +79,10 @@ class ShowcaseUI:
         )
 
         self.behavior_button.pack(pady=20)
+
+        # =========================
+        # STOP AUTONOMY BUTTON
+        # =========================
 
         self.stop_button = tk.Button(
             root,
@@ -89,7 +100,7 @@ class ShowcaseUI:
         self.check_nodes()
 
     # =========================
-    # Start system bringup
+    # START SYSTEM
     # =========================
 
     def start_system(self):
@@ -108,12 +119,12 @@ class ShowcaseUI:
 
         threading.Thread(
             target=lambda: subprocess.Popen(
-                ["gnome-terminal", "--", "bash", "-c", cmd]
+                ["bash", "-c", cmd]
             )
         ).start()
 
     # =========================
-    # Start autonomy
+    # START AUTONOMY
     # =========================
 
     def start_behavior(self):
@@ -127,12 +138,12 @@ class ShowcaseUI:
 
         threading.Thread(
             target=lambda: subprocess.Popen(
-                ["gnome-terminal", "--", "bash", "-c", cmd]
+                ["bash", "-c", cmd]
             )
         ).start()
 
     # =========================
-    # Stop autonomy
+    # STOP AUTONOMY
     # =========================
 
     def stop_behavior(self):
@@ -143,7 +154,7 @@ class ShowcaseUI:
         )
 
     # =========================
-    # Node status check
+    # CHECK NODE STATUS
     # =========================
 
     def check_nodes(self):
