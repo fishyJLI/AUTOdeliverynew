@@ -7,9 +7,11 @@ Subscribes:
     /led_state   (std_msgs/String)
 
 Sends over serial:
-    "vx wz\n"
-    "LED:FLASH\n"
-    "LED:OFF\n"
+    "vx wz flash\n"
+
+flash:
+    0 = LED off
+    1 = LED flashing
 """
 
 import rclpy
@@ -25,7 +27,6 @@ class CmdVelSerialBridge(Node):
     def __init__(self):
         super().__init__("cmdvel_serial_bridge")
 
-        # -------- Parameters --------
         self.declare_parameter("port", "/dev/ttyUSB0")
         self.declare_parameter("baudrate", 115200)
         self.declare_parameter("cmd_topic", "/cmd_vel")
@@ -40,20 +41,18 @@ class CmdVelSerialBridge(Node):
         self.send_rate = float(self.get_parameter("send_rate_hz").value)
         self.timeout_s = float(self.get_parameter("timeout_s").value)
 
-        # -------- Serial connection --------
         try:
             self.ser = serial.Serial(self.port, self.baudrate, timeout=0.1)
-            time.sleep(2.0)  # allow Arduino reset
+            time.sleep(2.0)
             self.get_logger().info(f"Opened serial port {self.port} @ {self.baudrate}")
         except Exception as e:
             self.get_logger().error(f"Failed to open serial port: {e}")
             raise
 
-        # -------- ROS setup --------
         self.latest_cmd = Twist()
         self.last_cmd_time = self.get_clock().now()
 
-        self.last_led_state = None
+        self.flash = 0
 
         self.create_subscription(Twist, self.cmd_topic, self.cmd_callback, 10)
         self.create_subscription(String, self.led_topic, self.led_callback, 10)
@@ -67,22 +66,12 @@ class CmdVelSerialBridge(Node):
     def led_callback(self, msg: String):
         led_state = msg.data.strip().upper()
 
-        # Only send if changed, to avoid spamming Arduino
-        if led_state == self.last_led_state:
-            return
+        if led_state == "FLASH":
+            self.flash = 1
+        else:
+            self.flash = 0
 
-        if led_state not in ["FLASH", "OFF", "ON"]:
-            self.get_logger().warn(f"Unknown LED state ignored: {led_state}")
-            return
-
-        line = f"LED:{led_state}\n"
-
-        try:
-            self.ser.write(line.encode("utf-8"))
-            self.last_led_state = led_state
-            self.get_logger().info(f"Sent LED command: {line.strip()}")
-        except Exception as e:
-            self.get_logger().error(f"LED serial write failed: {e}")
+        self.get_logger().info(f"LED state={led_state}, flash={self.flash}")
 
     def timer_callback(self):
         now = self.get_clock().now()
@@ -91,12 +80,11 @@ class CmdVelSerialBridge(Node):
         vx = self.latest_cmd.linear.x
         wz = self.latest_cmd.angular.z
 
-        # Safety timeout
         if dt > self.timeout_s:
             vx = 0.0
             wz = 0.0
 
-        line = f"{vx:.3f} {wz:.3f}\n"
+        line = f"{vx:.3f} {wz:.3f} {self.flash}\n"
 
         try:
             self.ser.write(line.encode("utf-8"))
