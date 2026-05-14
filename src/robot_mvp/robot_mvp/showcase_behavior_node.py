@@ -36,12 +36,12 @@ class ShowcaseBehaviorNode(Node):
         if self.semantic_state == "PERSON":
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
-            led.data = "OFF"
+            led.data = "FLASH"
 
         elif self.semantic_state == "OBSTACLE":
             cmd.linear.x = 0.0
             cmd.angular.z = 0.0
-            led.data = "FLASH"
+            led.data = "OFF"
 
         else:
             cmd.linear.x = self.forward_speed
