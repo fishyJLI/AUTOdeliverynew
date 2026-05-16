@@ -47,7 +47,7 @@ class SemanticDecisionNode(Node):
         state_msg = String()
 
         # Priority logic
-        if self.person_state == "PERSON":
+        if self.person_state == "PERSON" and self.lidar_state == "BLOCKED":
             state_msg.data = "PERSON"
         elif self.lidar_state == "BLOCKED":
             state_msg.data = "OBSTACLE"
