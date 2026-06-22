@@ -41,6 +41,7 @@ setup(
             'keyboard_cmdvel_node = robot_mvp.keyboard_cmdvel_node:main',
             'simple_behavior_node = robot_mvp.simple_behavior_node:main',
             'showcase_behavior_node = robot_mvp.showcase_behavior_node:main',
+            'gps_report_node = robot_mvp.gps_report_node:main',
         ],
     },
 )
